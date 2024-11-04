@@ -4,14 +4,30 @@ use crate::ast::{Expr, Opcode, Statement, Identifier};
 grammar;
 
 pub Program: Vec<Statement> = {
-    (<Statement> ";")*
+    InstructionBlock,
+};
+
+InstructionBlock: Vec<Statement> = {
+    (Instruction)*
+};
+
+Instruction: Statement = {
+    <Statement> ";",
+    <Structure>
+};
+
+Structure: Statement = {
+    "if" <p:Predicate> "{" <ib:(Instruction)*> "}" <t:IfTail?> => Statement::If(p, ib, t),
+};
+
+IfTail: Vec<Statement> = {
+    "else" "{" <(Instruction)*> "}"
 };
 
 Statement: Statement = {
     "let" <id:ID> <e:Assign?> => Statement::Declaration(id, e),
     <id:ID> <e:Assign> => Statement::Assignment(id, e),
     Read,
-    Predicate => Statement::Predicate(<>),
 };
 
 Assign: Box<Expr> = {
@@ -64,6 +80,7 @@ Factor: Box<Expr> = {
 FactorOp: Opcode = {
     "*" => Opcode::Mul,
     "/" => Opcode::Div,
+    "%" => Opcode::Mod,
 };
 
 Exp: Box<Expr> = {

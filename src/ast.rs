@@ -7,7 +7,7 @@ pub enum Statement {
     Declaration(Identifier, Option<Box<Expr>>),
     Assignment(Identifier, Box<Expr>),
     Read(Identifier),
-    Predicate(Box<Expr>),
+    If(Box<Expr>, Vec<Statement>, Option<Vec<Statement>>),
 }
 
 pub enum Expr {
@@ -23,6 +23,7 @@ pub enum Opcode {
     Mul,
     Div,
     Exp,
+    Mod,
     And,
     Or,
     Not,
@@ -41,6 +42,7 @@ impl fmt::Debug for Opcode {
             Opcode::Sub => "-",
             Opcode::Mul => "*",
             Opcode::Div => "/",
+            Opcode::Mod => "%",
             Opcode::Exp => "^",
             Opcode::And => "and",
             Opcode::Or => "or",
