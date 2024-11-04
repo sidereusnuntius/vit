@@ -1,2 +1,85 @@
+use std::str::FromStr;
+use crate::ast::{Expr, Opcode, Statement, Identifier};
 
-Num: i32 = r"[0-9]"
+grammar;
+
+pub Program: Vec<Statement> = {
+    (<Statement> ";")*
+};
+
+Statement: Statement = {
+    "let" <id:ID> <e:Assign?> => Statement::Declaration(id, e),
+    <id:ID> <e:Assign> => Statement::Assignment(id, e),
+    Read,
+    Predicate => Statement::Predicate(<>),
+};
+
+Assign: Box<Expr> = {
+    "=" <Expr>
+};
+
+Read: Statement = {
+    "read" <ID> => Statement::Read(<>),
+};
+
+Predicate: Box<Expr> = {
+    Predicate Connective LogicalExpression => Box::new(Expr::Predicate(<>)),
+    LogicalExpression,
+};
+
+Connective: Opcode = {
+    "and" => Opcode::And,
+    "or" => Opcode::Or,
+};
+
+LogicalExpression: Box<Expr> = {
+    Expr LogicalOp Expr => Box::new(Expr::Predicate(<>)),
+    "(" <Predicate> ")"
+};
+
+LogicalOp: Opcode = {
+    "==" => Opcode::Eq,
+    "!=" => Opcode::Neq,
+    ">" => Opcode::Grt,
+    "<" => Opcode::Let,
+    ">=" => Opcode::Geq,
+    "<=" => Opcode::Leq,
+};
+
+Expr: Box<Expr> = {
+    Expr ExprOp Factor => Box::new(Expr::Op(<>)),
+    Factor,
+};
+
+ExprOp: Opcode = {
+    "+" => Opcode::Add,
+    "-" => Opcode::Sub,
+};
+
+Factor: Box<Expr> = {
+    Factor FactorOp Exp => Box::new(Expr::Op(<>)),
+    Exp,
+};
+
+FactorOp: Opcode = {
+    "*" => Opcode::Mul,
+    "/" => Opcode::Div,
+};
+
+Exp: Box<Expr> = {
+    Term Expop Exp => Box::new(Expr::Op(<>)),
+    Term,
+};
+
+Expop: Opcode = {
+    "^" => Opcode::Exp
+}
+
+Term: Box<Expr> = {
+    "(" <Expr> ")",
+    Num => Box::new(Expr::Number(<>)),
+    ID => Box::new(Expr::Id(<>)),
+}
+
+Num: i32 = r"[0-9]+" => i32::from_str(<>).unwrap();
+ID: Identifier = r"[a-zA-z_][a-zA-z0-9_]*" => String::from(<>);
