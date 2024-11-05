@@ -1,11 +1,8 @@
-use lalrpop_util::lalrpop_mod;
-
-lalrpop_mod!(pub vit);
-pub mod ast;
+use vit::parser;
 
 fn main() {
     
-    let expr = vit::ProgramParser::new()
+    let expr = parser::Parser::new()
     .parse("c = 2 + -   2.0;")
     .unwrap();
     println!("{expr:?}");
