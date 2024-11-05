@@ -6,16 +6,7 @@ pub mod ast;
 fn main() {
     
     let expr = vit::ProgramParser::new()
-    .parse("\
-    let a = 0;
-    loop {
-        write a;
-        a = a + 1;
-        if a == 10 {
-            break;
-        }
-    }
-    write 'END OF THE PROGRAM\n';")
+    .parse("c = 2 + -   2.0;")
     .unwrap();
     println!("{expr:?}");
 }

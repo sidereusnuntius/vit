@@ -16,7 +16,9 @@ pub enum Statement {
 }
 
 pub enum Expr {
-    Number(i32),
+    Number(bool, Box<Expr>),
+    Integer(i32),
+    Float(f32),
     Id(Identifier),
     Op(Box<Expr>, Opcode, Box<Expr>),
     Predicate(Box<Expr>, Opcode, Box<Expr>),
@@ -65,7 +67,9 @@ impl fmt::Debug for Opcode {
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", match self {
-            Expr::Number(n) => format!("{n}"),
+            Expr::Number(sign, num) => format!("{}{:?}", if *sign { "-" } else { "" }, num),
+            Expr::Integer(n) => format!("{n}"),
+            Expr::Float(n) => format!("{n}"),
             Expr::Op(l, op, r) => format!("({:?} {op:?} {:?})",
                 *l, *r),
             Expr::Predicate(l, op, r) => format!("({:?} {op:?} {:?})",
