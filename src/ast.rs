@@ -8,6 +8,11 @@ pub enum Statement {
     Assignment(Identifier, Box<Expr>),
     Read(Identifier),
     If(Box<Expr>, Vec<Statement>, Option<Vec<Statement>>),
+    Until(Box<Expr>, Vec<Statement>),
+    WriteLiteral(String),
+    WriteId(Identifier),
+    Loop(Vec<Statement>),
+    Break,
 }
 
 pub enum Expr {

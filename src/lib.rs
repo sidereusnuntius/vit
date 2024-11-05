@@ -6,6 +6,8 @@ pub mod ast;
 
 #[cfg(test)]
 mod tests {
+    use std::result;
+
     use super::*;
 
     #[test]

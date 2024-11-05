@@ -18,6 +18,8 @@ Instruction: Statement = {
 
 Structure: Statement = {
     "if" <p:Predicate> "{" <ib:(Instruction)*> "}" <t:IfTail?> => Statement::If(p, ib, t),
+    "do" "{" <ib:(Instruction)*> "}" "until" <p:Predicate> ";" => Statement::Until(p, ib),
+    "loop" "{" <ib:(Instruction)*> "}" => Statement::Loop(ib),
 };
 
 IfTail: Vec<Statement> = {
@@ -28,6 +30,8 @@ Statement: Statement = {
     "let" <id:ID> <e:Assign?> => Statement::Declaration(id, e),
     <id:ID> <e:Assign> => Statement::Assignment(id, e),
     Read,
+    Write,
+    "break" => Statement::Break,
 };
 
 Assign: Box<Expr> = {
@@ -36,6 +40,11 @@ Assign: Box<Expr> = {
 
 Read: Statement = {
     "read" <ID> => Statement::Read(<>),
+};
+
+Write: Statement = {
+    "write" <Literal> => Statement::WriteLiteral(<>),
+    "write" <ID> => Statement::WriteId(<>),
 };
 
 Predicate: Box<Expr> = {
@@ -100,3 +109,4 @@ Term: Box<Expr> = {
 
 Num: i32 = r"[0-9]+" => i32::from_str(<>).unwrap();
 ID: Identifier = r"[a-zA-z_][a-zA-z0-9_]*" => String::from(<>);
+Literal: String = r#"'(?:[^"\\]|\\.)*'"# => String::from(<>);
