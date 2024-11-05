@@ -70,7 +70,7 @@ impl fmt::Debug for Expr {
                 *l, *r),
             Expr::Predicate(l, op, r) => format!("({:?} {op:?} {:?})",
                 *l, *r),
-            Expr::Id(ID) => ID.clone(),
+            Expr::Id(id) => id.clone(),
         })
     }
 }
