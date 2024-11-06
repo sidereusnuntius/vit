@@ -47,7 +47,7 @@ Write: Statement = {
     "write" <ID> => Statement::WriteId(<>),
 };
 
-Predicate: Box<Expr> = {
+pub Predicate: Box<Expr> = {
     Predicate Connective LogicalExpression => Box::new(Expr::Predicate(<>)),
     LogicalExpression,
 };

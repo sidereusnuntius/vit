@@ -83,12 +83,15 @@ impl Translator {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::BorrowMut;
+
     use super::*;
 
     use lalrpop_util::{lalrpop_mod, lexer::Token, ParseError};
 
     lalrpop_mod!(pub vit_grammar);
 
+    #[test]
     fn valid_expression() {
         if let Ok(expr) = vit_grammar::ExprParser::new().parse("2 + 3 * 4 - 3") {
             let mut result = String::new();
@@ -98,6 +101,7 @@ mod tests {
         }
     }
 
+    #[test]
     fn expression_with_undefined_id() {
         let expr = vit_grammar::ExprParser::new().parse("2 + 3 * a - 3").unwrap();
         
@@ -108,6 +112,7 @@ mod tests {
         assert!(Translator::parse_expression(&table, *expr, &mut result).is_err());
     }
 
+    #[test]
     fn valid_expression_with_id() {
         let expr = vit_grammar::ExprParser::new().parse("(7 * (start + 2) - 2) + 2 / a").unwrap();
         
@@ -119,6 +124,22 @@ mod tests {
         table.insert("start".to_string(), 1);
     
         Translator::parse_expression(&table, *expr, &mut result);
+        assert_eq!(result, "ldc 7\nlod #1\nldc 2\nadd\nmul\nldc 2\nsub\nldc 2\nlod #0\ndiv\nadd\n");
+    }
+
+    #[test]
+    fn valid_predicate() {
+        
+        let expr = vit_grammar::PredicateParser::new().parse("2 + 3 * a > b / 2").unwrap();
+
+        let mut result = String::new();
+            
+            
+        let mut table: HashMap<String, u32> = HashMap::new();
+        table.insert("a".to_string(), 0);
+        table.insert("start".to_string(), 1);
+    
+        assert!(Translator::parse_expression(&table, *expr, &mut result).is_ok());
         assert_eq!(result, "ldc 7\nlod #1\nldc 2\nadd\nmul\nldc 2\nsub\nldc 2\nlod #0\ndiv\nadd\n");
     }
 }
