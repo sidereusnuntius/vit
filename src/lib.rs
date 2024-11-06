@@ -3,7 +3,8 @@ use std::{error::Error, io::Read};
 use ast::Statement;
 
 pub mod parser;
-mod ast;
+pub mod ast;
+mod translator;
 
 pub fn run<'a>(config: Config, source: &'a String) -> Result<(), Box<dyn Error + 'a>>{
     let ast = parser::Parser::new().parse(&source)?;

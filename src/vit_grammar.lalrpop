@@ -71,7 +71,7 @@ LogicalOp: Opcode = {
     "<=" => Opcode::Leq,
 };
 
-Expr: Box<Expr> = {
+pub Expr: Box<Expr> = {
     Expr ExprOp Factor => Box::new(Expr::Op(<>)),
     Factor,
 };
