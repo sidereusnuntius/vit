@@ -48,7 +48,7 @@ Write: Statement = {
 };
 
 pub Predicate: Box<Expr> = {
-    Predicate Connective LogicalExpression => Box::new(Expr::Predicate(<>)),
+    Predicate Connective LogicalExpression => Box::new(Expr::Op(<>)),
     LogicalExpression,
 };
 
@@ -58,7 +58,7 @@ Connective: Opcode = {
 };
 
 LogicalExpression: Box<Expr> = {
-    Expr LogicalOp Expr => Box::new(Expr::Predicate(<>)),
+    Expr LogicalOp Expr => Box::new(Expr::Op(<>)),
     "(" <Predicate> ")"
 };
 

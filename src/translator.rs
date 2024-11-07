@@ -1,145 +1,264 @@
 use std::{collections::HashMap};
 
-use crate::ast::{Expr, Opcode, Statement};
+use crate::ast::{Expr, Statement};
 
-type Address = u32;
-type Label = String;
+mod expressions;
+
+// type Address = u32;
+// type Label = String;
+
+struct Variable {
+    address: u32,
+    initialized: bool,
+}
 
 // Generates p-code from the AST created by the parser.
-enum DataType {
-    String(String),
-    Float(f32),
-    Integer(i32),
-}
-
-struct Frame {
-    symbol_table: HashMap<String, u32>,
-    is_root_frame: bool,
-}
-
 pub struct Translator {
-    stack: Vec<Frame>,
+    stack: Vec<HashMap<String, Variable>>,
     current_address: u32, // When the next value is stored, it will go in this address.,
 }
 
+// pub fn build() -> Translator {
+//     let root_frame = Frame {
+//         symbol_table: HashMap::new(),
+//         is_root_frame: true,
+//     };
+
+//     Translator {
+//         stack: vec![root_frame],
+//         current_address: 0,
+//     }
+// }
+
 impl Translator {
-    pub fn build(ast: Vec<Statement>) -> Translator {
-        let mut root_frame = Frame {
-            symbol_table: HashMap::new(),
-            is_root_frame: true,
-        };
-        
+    pub fn new() -> Self {
+        let stack = vec![HashMap::new()];
         Translator {
-            stack: vec![root_frame],
+            stack,
             current_address: 0,
         }
     }
-
-    pub fn run(mut self, ast: Vec<Statement>) -> () {
-
-        let mut result = String::new();
-    }
-
-    fn parse_op(op: Opcode) -> &'static str {
-        match op {
-            Opcode::Add => "add\n",
-            Opcode::Sub => "sub\n",
-            Opcode::Mul => "mul\n",
-            Opcode::Div => "div\n",
-            _ => "",
+    
+    pub fn parse_statement(&mut self, statement: Statement) -> Result<String, String> {
+        match statement {
+            Statement::Declaration(id, expr) => self.declare(id, expr),
+            Statement::Assignment(id, expr) => self.assign(id, expr),
+            Statement::Read(id) => self.read(id),
+            _ => Err("Not implemented yet.".to_string()),
         }
     }
     
-    fn parse_expression(symbol_table: &HashMap<String, u32>, expr: Expr, result: &mut String) -> Result<(), String> {
+    fn read(&mut self, id: String) -> Result<String, String> {
+        let address = Self::get_address(&self.stack, &id)?.0;
+        Ok(format!("lda #{}\nrd\nsto\n", address))
+    }
+
+    fn assign(&mut self, id: String, expr: Box<Expr>) -> Result<String, String> {
+        let address = Self::get_address(&self.stack, &id)?.0;
+
+        let mut result = format!("lda #{address}\n");
+        Self::parse_expression(&self.stack, *expr, &mut result)?;
+
+        result.push_str("sto\n");
+        Ok(result)
+    }
+
+    fn declare(&mut self, id: String, e: Option<Box<Expr>>) -> Result<String, String> {
+        if self.stack.is_empty() {
+            self.stack.push(HashMap::new());
+        }
         
-        match expr {
-            Expr::Number(sign, num) => {
-                result.push_str(&format!("ldc {}{}\n", if sign { "-"} else { ""}, num));
-            },
-            Expr::Op(l, op, r) => {
-                Self::parse_expression(symbol_table, *l, result)?;
-                Self::parse_expression(symbol_table, *r, result)?;
-                result.push_str(Self::parse_op(op));
-    
-            },
-            Expr::Id(id) => {
-                let address = symbol_table.get(&id);
-                if address.is_none() {
-                    return Err(format!("Undefined symbol: {id}."));
-                }
-                result.push_str(&format!("lod #{}\n", address.unwrap()));
-            },
-            _ => (),
+        if self.stack.last().unwrap().contains_key(&id) { return Err(format!("variable already declared: {}.", id)); }
+        
+        let variable = Variable {address: self.current_address, initialized: e.is_some()};
+        
+        let mut result = String::new();
+        
+        if let Some(expr) = e {
+            result.push_str(&format!("lda #{}\n", self.current_address));
+            let _ = Self::parse_expression(&self.stack, *expr, &mut result)?;
+            result.push_str("sto\n");
         }
-    
-        Ok(())
-    }
-
-    fn add_identifier(&mut self, id: String) -> () {
-        self.stack.last_mut().unwrap().symbol_table.insert(id, self.current_address);
+        
+        self.stack.last_mut().unwrap().insert(id, variable);
         self.current_address += 1;
+        Ok(result)
     }
+    
+    
 }
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::BorrowMut;
-
     use super::*;
-
-    use lalrpop_util::{lalrpop_mod, lexer::Token, ParseError};
-
+    
+    use lalrpop_util::lalrpop_mod;
+    
     lalrpop_mod!(pub vit_grammar);
-
+    
+    
     #[test]
-    fn valid_expression() {
-        if let Ok(expr) = vit_grammar::ExprParser::new().parse("2 + 3 * 4 - 3") {
-            let mut result = String::new();
-            let table: HashMap<String, u32> = HashMap::new();
-            let _ = Translator::parse_expression(&table, *expr, &mut result);
-            assert_eq!(result, "ldc 2\nldc 3\nldc 4\nmul\nadd\nldc 3\nsub\n");
-        }
+    fn valid_declaration() {
+        let mut translator = Translator::new();
+        let statement = Statement::Declaration("a".to_string(), None);
+        
+        let result = translator.parse_statement(statement);
+        assert!(result.unwrap().is_empty());
+        assert_eq!(translator.current_address, 1);
+        assert!(translator.stack.get(0).unwrap().contains_key("a"));
+    }
+    
+    #[test]
+    fn valid_declaration_with_assignment() {
+        let mut translator = Translator::new();
+        
+        let _ = translator.parse_statement(Statement::Declaration("a".to_string(),
+        Some(vit_grammar::ExprParser::new().parse("24").unwrap())));
+        
+        let statement = Statement::Declaration("b".to_string(),
+        Some(vit_grammar::ExprParser::new().parse("a * 2 + 1").unwrap())
+    );
+    
+    let result = translator.parse_statement(statement);
+    assert_eq!(result.unwrap(), "lda #1\nlod #0\nldc 2\nmul\nldc 1\nadd\nsto\n");
+    assert_eq!(translator.current_address, 2);
+    assert!(translator.stack.get(0).unwrap().contains_key("b"));
     }
 
     #[test]
-    fn expression_with_undefined_id() {
-        let expr = vit_grammar::ExprParser::new().parse("2 + 3 * a - 3").unwrap();
+    fn declaration_with_shadowing() {
+        let mut translator = Translator::new();
         
-        let mut result = String::new();
-            
-        let table: HashMap<String, u32> = HashMap::new();
-    
-        assert!(Translator::parse_expression(&table, *expr, &mut result).is_err());
+        let _ = translator.parse_statement(Statement::Declaration("a".to_string(),
+        Some(vit_grammar::ExprParser::new().parse("24").unwrap())));
+        
+        let statement = Statement::Declaration("a".to_string(),
+        Some(vit_grammar::ExprParser::new().parse("4").unwrap())
+    );
+
+    let result = translator.parse_statement(statement);
+    assert!(result.is_err());
     }
 
     #[test]
-    fn valid_expression_with_id() {
-        let expr = vit_grammar::ExprParser::new().parse("(7 * (start + 2) - 2) + 2 / a").unwrap();
+    fn declaration_inside_inner_scope() {
+        let mut translator = Translator::new();
         
-        let mut result = String::new();
-            
-            
-        let mut table: HashMap<String, u32> = HashMap::new();
-        table.insert("a".to_string(), 0);
-        table.insert("start".to_string(), 1);
-    
-        Translator::parse_expression(&table, *expr, &mut result);
-        assert_eq!(result, "ldc 7\nlod #1\nldc 2\nadd\nmul\nldc 2\nsub\nldc 2\nlod #0\ndiv\nadd\n");
+        let _ = translator.parse_statement(Statement::Declaration("a".to_string(),
+        Some(vit_grammar::ExprParser::new().parse("24").unwrap())));
+        
+        translator.stack.push(HashMap::new());
+        
+        let statement = Statement::Declaration("b".to_string(),
+        Some(vit_grammar::ExprParser::new().parse("a * 2").unwrap())
+    );
+
+    let result = translator.parse_statement(statement);
+    assert_eq!(result.unwrap(), "lda #1\nlod #0\nldc 2\nmul\nsto\n");
+    assert_eq!(translator.current_address, 2);
+    assert!(translator.stack.last().unwrap().contains_key("b"));
     }
 
     #[test]
-    fn valid_predicate() {
+    fn use_after_scope() {
+        let mut translator = Translator::new();
         
-        let expr = vit_grammar::PredicateParser::new().parse("2 + 3 * a > b / 2").unwrap();
+        translator.stack.push(HashMap::new());
+        
+        let statement = Statement::Declaration("b".to_string(),
+        Some(vit_grammar::ExprParser::new().parse("2").unwrap())
+    );
 
-        let mut result = String::new();
-            
-            
-        let mut table: HashMap<String, u32> = HashMap::new();
-        table.insert("a".to_string(), 0);
-        table.insert("start".to_string(), 1);
-    
-        assert!(Translator::parse_expression(&table, *expr, &mut result).is_ok());
-        assert_eq!(result, "ldc 7\nlod #1\nldc 2\nadd\nmul\nldc 2\nsub\nldc 2\nlod #0\ndiv\nadd\n");
+    let _ = translator.parse_statement(statement);
+
+    translator.stack.pop();
+
+    let statement = Statement::Declaration("a".to_string(),
+    Some(vit_grammar::ExprParser::new().parse("b + 2").unwrap())
+    );
+
+    let result = translator.parse_statement(statement);
+
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("undeclared variable"));
+    }
+
+    #[test]
+    fn assign_to_undefined_variable() {
+        let mut translator = Translator::new();
+
+        let result = translator.parse_statement(Statement::Assignment("a".to_string(),
+            vit_grammar::ExprParser::new().parse("24").unwrap())
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn assign_to_variable() {
+        let mut translator = Translator::new();
+
+        let _ = translator.parse_statement(
+            Statement::Declaration("age".to_string(), None)
+        );
+
+        let result = translator.parse_statement(
+            Statement::Assignment("age".to_string(),
+            vit_grammar::ExprParser::new().parse("24").unwrap())
+        ).unwrap();
+
+        assert_eq!(result, "lda #0\nldc 24\nsto\n");
+    }
+
+    #[test]
+    fn assign_expression_to_variable() {
+        let mut translator = Translator::new();
+        let parser = vit_grammar::ExprParser::new();
+
+        let _ = translator.parse_statement(
+            Statement::Declaration("average".to_string(), None)
+        );
+
+        let _ = translator.parse_statement(
+            Statement::Declaration("n1".to_string(),
+            Some(parser.parse("7.8").unwrap()))
+        );
+
+        let _ = translator.parse_statement(
+            Statement::Declaration("n2".to_string(),
+            Some(parser.parse("9.0").unwrap()))
+        );
+
+        let result = translator.parse_statement(
+            Statement::Assignment("average".to_string(),
+            parser.parse("(n1 + n2) / 2").unwrap())
+        ).unwrap();
+
+        assert_eq!(result, "lda #0\nlod #1\nlod #2\nadd\nldc 2\ndiv\nsto\n");
+        assert_eq!(translator.current_address, 3);
+    }
+
+    #[test]
+    fn read_to_variable() {
+        let mut translator = Translator::new();
+        let _ = translator.parse_statement(Statement::Declaration("age".to_string(), None));
+
+        let result = translator.parse_statement(
+            Statement::Read("age".to_string())
+        );
+
+        assert_eq!(result.unwrap(), "lda #0\nrd\nsto\n");
+    }
+
+    #[test]
+    fn read_to_undeclared_variable() {
+        let mut translator = Translator::new();
+
+        let result = translator.parse_statement(
+            Statement::Read("age".to_string())
+        );
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("undeclared variable"));
     }
 }
