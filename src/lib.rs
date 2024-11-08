@@ -1,22 +1,21 @@
-use std::{error::Error};
-
-use translator::Translator;
+use std::{error::Error, fs};
 
 pub mod parser;
-pub mod ast;
-mod translator;
+mod ast;
+pub mod vit;
 
-pub fn run<'a>(config: Config, source: &'a String) -> Result<(), Box<dyn Error + 'a>>{
-    let ast = parser::Parser::new().parse(&source)?;
-    ast.iter().map(|statement| println!("{:?}", *statement)).collect::<()>();
+pub fn run<'a>(config: Config) -> Result<(), Box<dyn Error + 'a>>{
+    let source_code = fs::read_to_string(&config.file_name)?;
+    let program = parser::Parser::new().parse(&source_code)?;
+    let result = vit::build(program)?;
+
+    fs::write(config.file_name.replace(".vit", ""), result)?;
 
     Ok(())
 }
 
 pub struct Config {
     pub file_name: String,
-    debug_mode: bool,
-    interpret: bool,
 }
 
 impl Config {
@@ -31,8 +30,6 @@ impl Config {
 
         Ok(Config {
             file_name,
-            debug_mode: false,
-            interpret: false,
         })
     }
 }

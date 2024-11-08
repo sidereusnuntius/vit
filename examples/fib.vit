@@ -1,0 +1,25 @@
+let n1 = 0;
+let n2 = 1;
+let num;
+
+write 'Insert a number: ';
+read num;
+
+write 'Printing out the first ';
+write num;
+write ' numbers of the Fibonacci sequence...\n';
+
+write n1;
+write '\n';
+
+loop {
+    num = num - 1;
+    if num <= 0 {
+        break;
+    }
+    write n2;
+    write '\n';
+    let temp = n2;
+    n2 = n1 + n2;
+    n1 = temp;
+}

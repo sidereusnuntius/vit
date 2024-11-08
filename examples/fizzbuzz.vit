@@ -1,0 +1,10 @@
+let num;
+read num;
+
+if num % 3 == 0 {
+    write 'Fizz';
+}
+if num % 5 == 0 {
+    write 'Buzz';
+}
+write '\n';

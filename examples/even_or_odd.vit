@@ -1,0 +1,9 @@
+let num;
+write 'Input a number: ';
+read num;
+write 'The number is ';
+if num % 2 == 0 {
+    write 'even.\n';
+} else {
+    write 'odd.\n'; 
+}

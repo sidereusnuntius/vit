@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use crate::ast::{Expr, Opcode};
 
-use super::{Translator, Variable};
+use super::{State, Variable};
 
-impl Translator {
+impl State {
     pub (super) fn get_address<'a>(stack: &'a mut Vec<HashMap<String, Variable>>, id: &String) -> Result<&'a mut Variable, String> {
         for scope in stack.iter_mut().rev() {
             if let Some(var) = scope.get_mut(id) {
@@ -86,7 +86,7 @@ mod tests {
         scope.insert("a".to_string(), Variable {address: 0, initialized: true});
         stack.push(scope);
 
-        let _ = Translator::parse_expression(&mut stack, *expr, &mut result);
+        let _ = State::parse_expression(&mut stack, *expr, &mut result);
         assert_eq!(result, "lod #0\nlod #0\nldc 2\ndiv\nto int\nldc 2\nmul\nsub\n");
     }
 
@@ -95,7 +95,7 @@ mod tests {
         if let Ok(expr) = vit_grammar::ExprParser::new().parse("2 + 3 * 4 - 3") {
             let mut result = String::new();
             let mut stack: Vec<HashMap<String, Variable>> = vec![];
-            let _ = Translator::parse_expression(&mut stack, *expr, &mut result);
+            let _ = State::parse_expression(&mut stack, *expr, &mut result);
             assert_eq!(result, "ldc 2\nldc 3\nldc 4\nmul\nadd\nldc 3\nsub\n");
         }
     }
@@ -109,7 +109,7 @@ mod tests {
         let mut stack: Vec<HashMap<String, Variable>> = vec![];
         stack.push(HashMap::new());
         
-        assert!(Translator::parse_expression(&mut stack, *expr, &mut result).is_err());
+        assert!(State::parse_expression(&mut stack, *expr, &mut result).is_err());
     }
     
     #[test]
@@ -126,7 +126,7 @@ mod tests {
         
         stack.push(table);
         
-        let _ = Translator::parse_expression(&mut stack, *expr, &mut result);
+        let _ = State::parse_expression(&mut stack, *expr, &mut result);
         assert_eq!(result, "ldc 7\nlod #1\nldc 2\nadd\nmul\nldc 2\nsub\nldc 2\nlod #0\ndiv\nadd\n");
     }
     
@@ -150,7 +150,7 @@ mod tests {
         
         stack.push(table);
         
-        let _ = Translator::parse_expression(&mut stack, *expr, &mut result);
+        let _ = State::parse_expression(&mut stack, *expr, &mut result);
         assert_eq!(result, "ldc 2\nlod #0\nadd\nldc 3\nlod #2\nmul\nsub\n");
     }
     
@@ -169,7 +169,7 @@ mod tests {
         let mut stack: Vec<HashMap<String, Variable>> = vec![];
         stack.push(table);
         
-        assert!(Translator::parse_expression(&mut stack, *expr, &mut result).is_ok());
+        assert!(State::parse_expression(&mut stack, *expr, &mut result).is_ok());
         assert_eq!(result, "ldc 2\nldc 3\nlod #0\nmul\nadd\nlod #1\nldc 2\ndiv\ngrt\n");
     }
     
@@ -189,7 +189,7 @@ mod tests {
         let mut stack: Vec<HashMap<String, Variable>> = vec![];
         stack.push(table);
         
-        assert!(Translator::parse_expression(&mut stack, *expr, &mut result).is_ok());
+        assert!(State::parse_expression(&mut stack, *expr, &mut result).is_ok());
         assert_eq!(result, "\
         ldc 2
 ldc 3
