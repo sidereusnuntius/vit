@@ -129,6 +129,6 @@ mod tests {
             break;
         }
     }
-    write 'END OF THE PROGRAM\n';").is_ok());
+    write 'END OF THE PROGRAM\\n';").is_ok());
     }
 }

@@ -72,8 +72,34 @@ impl Translator {
     fn if_statement(&mut self, predicate: Box<Expr>,
         if_block: Vec<Statement>,
         else_block: Option<Vec<Statement>>) -> Result<String, String> {
+            let mut result = String::new();
+            
+            let label = self.label_count;
+            self.label_count += 1;
+            
+            Self::parse_expression(&self.stack, *predicate, &mut result)?;
+            result.push_str(&format!("fjp {}{}\n",
+                if let Some(_) = else_block { "F" } else { "E" },
+                label
+            )); // Jump to else if condition is false.
 
-           Ok(String::new()) 
+            // IF-BLOCK
+            self.push_scope();
+            result.push_str(&self.run(if_block)?);
+            self.pop_scope();
+            
+            // ELSE-BLOCK
+            if let Some(e_block) = else_block {
+                result.push_str(&format!("ujp E{label}\n")); // Jump to the end of the else block.
+
+                self.push_scope();
+                result.push_str(&format!("F{label}:\n"));
+                result.push_str(&self.run(e_block)?);
+                self.pop_scope();
+            }
+            result.push_str(&format!("E{label}:\n"));
+            
+            Ok(result) 
     }
 
     fn break_loop(&mut self) -> Result<String, String> {
@@ -440,5 +466,76 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("undeclared"));
         assert_eq!(translator.current_address, 0);
+    }
+
+    #[test]
+    fn basic_if() {
+        let program = vit_grammar::ProgramParser::new()
+            .parse("let a;
+            read a;
+            if a == 2 {
+                write 'a is 2.\\n';
+            }").unwrap();
+
+        let mut translator = Translator::new();
+        
+        let result = translator.run(program);
+    
+        assert_eq!(result.unwrap(), "lda #0\nrd\nsto\nlod #0\nldc 2\nequ\nfjp E0\nldc \"a is 2.\\n\"\nwri\nE0:\n");
+    }
+
+    #[test]
+    fn if_else() {
+        let program = vit_grammar::ProgramParser::new()
+            .parse("let a;
+            read a;
+            if a == 2 {
+                write 'a is 2.\\n';
+            } else {
+                write 'a is not 2.\\n'; 
+            }").unwrap();
+
+        let mut translator = Translator::new();
+        
+        let result = translator.run(program);
+    
+        assert_eq!(result.unwrap(), "lda #0\nrd\nsto\nlod #0\nldc 2\nequ\nfjp F0\nldc \"a is 2.\\n\"\nwri\nujp E0\nF0:\nldc \"a is not 2.\\n\"\nwri\nE0:\n");
+    }
+
+    #[test]
+    fn if_scope() {
+        let program = vit_grammar::ProgramParser::new()
+            .parse("let a;
+            if a == 2 {
+                let b;
+                let c;
+                let d;
+            }
+            let b;").unwrap();
+
+        let mut translator = Translator::new();
+        
+        let result = translator.run(program);
+    
+        assert!(result.is_ok());
+        assert_eq!(translator.current_address, 2);
+    }
+
+    #[test]
+    fn if_invalid_scope() {
+        let program = vit_grammar::ProgramParser::new()
+            .parse("let a;
+            if a == 2 {
+                let b;
+            }
+            write b;").unwrap();
+
+        let mut translator = Translator::new();
+        
+        let result = translator.run(program);
+    
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("undeclared"));
+        assert_eq!(translator.current_address, 1);
     }
 }
