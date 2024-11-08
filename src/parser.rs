@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use lalrpop_util::{lalrpop_mod, lexer::Token, ParseError};
 use crate::ast::Statement;
 
@@ -5,17 +7,40 @@ lalrpop_mod!(pub vit_grammar);
 
 pub struct Parser {
     parser: vit_grammar::ProgramParser,
+    map: HashMap<String, String>,
 }
 
 impl Parser {
     pub fn new() -> Parser {
         Parser {
-            parser: vit_grammar::ProgramParser::new()
+            parser: vit_grammar::ProgramParser::new(),
+            map: {
+                let mut map = HashMap::new();
+                map.insert("r#\"[a-zA-z][a-zA-z0-9_]*\"#".to_string(), "an identifier".to_string());
+                map.insert("r#\"'.*'\"#".to_string(), "a string literal".to_string());
+                map
+            }
         }
     }
 
-    pub fn parse<'input>(&self, source: &'input str) -> Result<Vec<Statement>, ParseError<usize, Token<'input>, &'static str>> {
-        self.parser.parse(source)
+    pub fn parse<'input>(&self, source: &'input str) -> Result<Vec<Statement>, String> {
+        match self.parser.parse(source) {
+            Err(error) => {
+                match error {
+                    ParseError::InvalidToken { location } => Err(format!("invalid token at {location}")),
+                    ParseError::UnrecognizedToken { token, expected } => {
+                        Err(format!("expected {:?}, found {}", expected.iter().map(
+                            |p| self.map.get(p).unwrap_or_else(|| p).clone()
+                        ).collect::<Vec<String>>(),
+                        token.1,))
+                    },
+                    ParseError::UnrecognizedEof { location, .. } => Err(format!("unexpected EoF at location {location}")),
+                    ParseError::User { error } => Err(format!("{error}")),
+                    ParseError::ExtraToken { token } => Err(format!("extra token: {}", token.1)),
+                }
+            },
+            Ok(program) => Ok(program),
+        }
     }
 }
 

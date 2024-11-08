@@ -24,6 +24,7 @@ pub enum Expr {
     Predicate(Box<Expr>, Opcode, Box<Expr>),
 }
 
+#[derive(PartialEq)]
 pub enum Opcode {
     Add,
     Sub,

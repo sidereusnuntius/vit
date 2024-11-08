@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, env::var};
 
 use crate::ast::{Expr, Statement};
 
@@ -65,7 +65,7 @@ impl Translator {
             },
             Statement::Loop(block) => self.u_loop(block),
             Statement::Break => self.break_loop(),
-            _ => Err("Not implemented yet.".to_string()),
+            Statement::Until(expr, block) => self.do_until(expr, block),
         }
     }
 
@@ -77,7 +77,7 @@ impl Translator {
             let label = self.label_count;
             self.label_count += 1;
             
-            Self::parse_expression(&self.stack, *predicate, &mut result)?;
+            Self::parse_expression(&mut self.stack, *predicate, &mut result)?;
             result.push_str(&format!("fjp {}{}\n",
                 if let Some(_) = else_block { "F" } else { "E" },
                 label
@@ -109,6 +109,23 @@ impl Translator {
         Ok(format!("ujp E{}\n", self.labels.last().unwrap()))
     }
 
+    fn do_until(&mut self, expr: Box<Expr>, block: Vec<Statement>) -> Result<String, String> {
+        let mut result = String::new();
+        let label = self.label_count;
+        self.labels.push(label);
+        self.push_scope();
+        
+        result.push_str(&format!("L{label}:\n"));
+
+        result.push_str(&self.run(block)?);
+
+        Self::parse_expression(&mut self.stack, *expr, &mut result)?;
+        result.push_str(&format!("fjp L{label}\nE{label}:\n"));
+        self.pop_scope();
+        self.labels.pop();
+        Ok(result)
+    }
+
     fn u_loop(&mut self, block: Vec<Statement>) -> Result<String, String> {
         let mut result = String::new();
 
@@ -130,18 +147,20 @@ impl Translator {
     }
     
     fn read(&mut self, id: String) -> Result<String, String> {
-        let address = Self::get_address(&self.stack, &id)?.0;
-        Ok(format!("lda #{}\nrd\nsto\n", address))
+        let variable = Self::get_address(&mut self.stack, &id)?;
+        variable.initialized = true;
+        
+        Ok(format!("lda #{}\nrd\nsto\n", variable.address))
     }
 
     fn write(&mut self, id: String) -> Result<String, String> {
-        let variable = Self::get_address(&self.stack, &id)?;
+        let variable = Self::get_address(&mut self.stack, &id)?;
 
-        if !variable.1 {
+        if !variable.initialized {
             return Err("unitialized variable.".to_string());
         }
 
-        Ok(format!("lod #{}\nwri\n", variable.0))
+        Ok(format!("lod #{}\nwri\n", variable.address))
     }
 
     fn write_string(&mut self, string: String) -> Result<String, String> {
@@ -149,10 +168,10 @@ impl Translator {
     }
 
     fn assign(&mut self, id: String, expr: Box<Expr>) -> Result<String, String> {
-        let address = Self::get_address(&self.stack, &id)?.0;
+        let address = Self::get_address(&mut self.stack, &id)?.address;
 
         let mut result = format!("lda #{address}\n");
-        Self::parse_expression(&self.stack, *expr, &mut result)?;
+        Self::parse_expression(&mut self.stack, *expr, &mut result)?;
 
         result.push_str("sto\n");
         Ok(result)
@@ -171,7 +190,7 @@ impl Translator {
         
         if let Some(expr) = e {
             result.push_str(&format!("lda #{}\n", self.current_address));
-            let _ = Self::parse_expression(&self.stack, *expr, &mut result)?;
+            let _ = Self::parse_expression(&mut self.stack, *expr, &mut result)?;
             result.push_str("sto\n");
             variable.initialized = true;
         }
@@ -537,5 +556,43 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("undeclared"));
         assert_eq!(translator.current_address, 1);
+    }
+
+    #[test]
+    fn if_inside_loop() {
+        let program = vit_grammar::ProgramParser::new()
+            .parse("loop {
+                let a;
+                read a;
+                if a != 0 {
+                    write a;
+                    write '\\n';
+                } else {
+                    break; 
+                }
+            }
+            write 'END';").unwrap();
+
+        let mut translator = Translator::new();
+        
+        let result = translator.run(program);
+    
+        assert_eq!(result.unwrap(), "L0:\nlda #0\nrd\nsto\nlod #0\nldc 0\nneq\nfjp F1\nlod #0\nwri\nldc \"\\n\"\nwri\nujp E1\nF1:\nujp E0\nE1:\nujp L0\nE0:\nldc \"END\"\nwri\n");
+    }
+
+    #[test]
+    fn if_do_until() {
+        let program = vit_grammar::ProgramParser::new()
+            .parse("do {
+                write 'Type a number: ';
+                let a;
+                read a;
+            } until a <= 0;").unwrap();
+
+        let mut translator = Translator::new();
+        
+        let result = translator.run(program);
+    
+        assert_eq!(result.unwrap(), "L0:\nldc \"Type a number: \"\nwri\nlda #0\nrd\nsto\nlod #0\nldc 0\nlte\nfjp L0\nE0:\n");
     }
 }
