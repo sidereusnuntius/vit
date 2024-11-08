@@ -1,6 +1,6 @@
-use std::{error::Error, io::Read};
+use std::{error::Error};
 
-use ast::Statement;
+use translator::Translator;
 
 pub mod parser;
 pub mod ast;
@@ -9,7 +9,7 @@ mod translator;
 pub fn run<'a>(config: Config, source: &'a String) -> Result<(), Box<dyn Error + 'a>>{
     let ast = parser::Parser::new().parse(&source)?;
     ast.iter().map(|statement| println!("{:?}", *statement)).collect::<()>();
-    
+
     Ok(())
 }
 
