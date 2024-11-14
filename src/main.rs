@@ -6,10 +6,10 @@ fn main() {
         Err(message) => {
             eprintln!("{message}");
             process::exit(1);
-        },
+        }
         Ok(config) => config,
     };
-    
+
     if let Err(e) = vit::run(config) {
         eprintln!("{:?}", e);
     };

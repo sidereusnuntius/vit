@@ -45,74 +45,86 @@ pub enum Opcode {
 
 impl fmt::Display for Opcode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match self {
-            Opcode::Add => "+",
-            Opcode::Sub => "-",
-            Opcode::Mul => "*",
-            Opcode::Div => "/",
-            Opcode::Mod => "%",
-            Opcode::Exp => "^",
-            Opcode::And => "and",
-            Opcode::Or => "or",
-            Opcode::Not => "!",
-            Opcode::Eq => "==",
-            Opcode::Neq => "!=",
-            Opcode::Grt => ">",
-            Opcode::Let => "<",
-            Opcode::Geq => ">=",
-            Opcode::Leq => "<=",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Opcode::Add => "+",
+                Opcode::Sub => "-",
+                Opcode::Mul => "*",
+                Opcode::Div => "/",
+                Opcode::Mod => "%",
+                Opcode::Exp => "^",
+                Opcode::And => "and",
+                Opcode::Or => "or",
+                Opcode::Not => "!",
+                Opcode::Eq => "==",
+                Opcode::Neq => "!=",
+                Opcode::Grt => ">",
+                Opcode::Let => "<",
+                Opcode::Geq => ">=",
+                Opcode::Leq => "<=",
+            }
+        )
     }
 }
 
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match self {
-            Expr::Number(sign, num) => format!("{}{}", if *sign { "-" } else { "" }, num),
-            Expr::Integer(n) => format!("{n}"),
-            Expr::Float(n) => format!("{n}"),
-            Expr::Op(l, op, r) => format!("({} {} {})",
-                *l, op, *r),
-            Expr::Predicate(l, op, r) => format!("({} {} {})",
-                *l, op, *r),
-            Expr::Id(id) => id.clone(),
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Expr::Number(sign, num) => format!("{}{}", if *sign { "-" } else { "" }, num),
+                Expr::Integer(n) => format!("{n}"),
+                Expr::Float(n) => format!("{n}"),
+                Expr::Op(l, op, r) => format!("({} {} {})", *l, op, *r),
+                Expr::Predicate(l, op, r) => format!("({} {} {})", *l, op, *r),
+                Expr::Id(id) => id.clone(),
+            }
+        )
     }
 }
 
 impl fmt::Debug for Opcode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match self {
-            Opcode::Add => "+",
-            Opcode::Sub => "-",
-            Opcode::Mul => "*",
-            Opcode::Div => "/",
-            Opcode::Mod => "%",
-            Opcode::Exp => "^",
-            Opcode::And => "and",
-            Opcode::Or => "or",
-            Opcode::Not => "!",
-            Opcode::Eq => "==",
-            Opcode::Neq => "!=",
-            Opcode::Grt => ">",
-            Opcode::Let => "<",
-            Opcode::Geq => ">=",
-            Opcode::Leq => "<=",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Opcode::Add => "+",
+                Opcode::Sub => "-",
+                Opcode::Mul => "*",
+                Opcode::Div => "/",
+                Opcode::Mod => "%",
+                Opcode::Exp => "^",
+                Opcode::And => "and",
+                Opcode::Or => "or",
+                Opcode::Not => "!",
+                Opcode::Eq => "==",
+                Opcode::Neq => "!=",
+                Opcode::Grt => ">",
+                Opcode::Let => "<",
+                Opcode::Geq => ">=",
+                Opcode::Leq => "<=",
+            }
+        )
     }
 }
 
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match self {
-            Expr::Number(sign, num) => format!("{}{}", if *sign { "-" } else { "" }, num),
-            Expr::Integer(n) => format!("{n}"),
-            Expr::Float(n) => format!("{n}"),
-            Expr::Op(l, op, r) => format!("({} {} {})",
-                *l, op, *r),
-            Expr::Predicate(l, op, r) => format!("({} {} {})",
-                *l, op, *r),
-            Expr::Id(id) => id.clone(),
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Expr::Number(sign, num) => format!("{}{}", if *sign { "-" } else { "" }, num),
+                Expr::Integer(n) => format!("{n}"),
+                Expr::Float(n) => format!("{n}"),
+                Expr::Op(l, op, r) => format!("({} {} {})", *l, op, *r),
+                Expr::Predicate(l, op, r) => format!("({} {} {})", *l, op, *r),
+                Expr::Id(id) => id.clone(),
+            }
+        )
     }
 }
